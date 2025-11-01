@@ -17,7 +17,7 @@ val circeVersion = "0.15.0-M1"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "sabrinacollatzminiproject",
+    name := "collatzminiproject",
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-ember-server" % http4sVersion,
       "org.http4s" %% "http4s-circe" % http4sVersion,

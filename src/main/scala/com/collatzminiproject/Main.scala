@@ -8,7 +8,7 @@ import com.collatzminiproject.routes.Routes
 import org.http4s.ember.server.EmberServerBuilder
 import config.{AppConfig, ConfigLoader}
 import cats.syntax.all.*
-import com.collatzminiproject.errors.failedSetupError
+import com.collatzminiproject.errors.Errors.failedSetupError
 import fs2.concurrent.Topic
 import org.http4s.HttpApp
 
