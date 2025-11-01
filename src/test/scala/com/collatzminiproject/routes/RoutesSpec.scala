@@ -1,4 +1,4 @@
-package com.sabrinacollatzminiproject.routes
+package com.collatzminiproject.routes
 
 import cats.effect.*
 import org.http4s.ember.client.*

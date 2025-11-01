@@ -1,4 +1,4 @@
-package com.sabrinacollatzminiproject.stream
+package com.collatzminiproject.stream
 
 sealed trait StreamBuilderResponse
 

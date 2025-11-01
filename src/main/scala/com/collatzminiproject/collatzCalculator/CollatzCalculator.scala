@@ -1,4 +1,4 @@
-package com.sabrinacollatzminiproject.collatzCalculator
+package com.collatzminiproject.collatzCalculator
 
 import cats.effect.IO
 

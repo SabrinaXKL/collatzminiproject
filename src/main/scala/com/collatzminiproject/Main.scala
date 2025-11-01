@@ -1,14 +1,14 @@
-package com.sabrinacollatzminiproject
+package com.collatzminiproject
 
 import cats.*
 import cats.effect.*
 import org.typelevel.log4cats.*
 import org.typelevel.log4cats.slf4j.Slf4jFactory
-import com.sabrinacollatzminiproject.routes.Routes
+import com.collatzminiproject.routes.Routes
 import org.http4s.ember.server.EmberServerBuilder
 import config.{AppConfig, ConfigLoader}
 import cats.syntax.all.*
-import com.sabrinacollatzminiproject.errors.failedSetupError
+import com.collatzminiproject.errors.failedSetupError
 import fs2.concurrent.Topic
 import org.http4s.HttpApp
 

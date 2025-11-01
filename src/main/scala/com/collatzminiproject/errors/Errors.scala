@@ -1,4 +1,4 @@
-package com.sabrinacollatzminiproject.errors
+package com.collatzminiproject.errors
 
 object Errors
  val failedSetupError = "FAILED SETUP WITH ERROR: "

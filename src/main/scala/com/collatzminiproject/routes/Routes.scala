@@ -1,10 +1,10 @@
-package com.sabrinacollatzminiproject.routes
+package com.collatzminiproject.routes
 
 import cats.*
 import cats.data.Kleisli
 import cats.effect.*
-import com.sabrinacollatzminiproject.errors.ResponseMessages.somethingWentWrong
-import com.sabrinacollatzminiproject.stream.StreamBuilder.{createMachine, destroyMachine, getAllMessages, getMessageFromId, incrementMachine}
+import com.collatzminiproject.errors.ResponseMessages.somethingWentWrong
+import com.collatzminiproject.stream.StreamBuilder.{createMachine, destroyMachine, getAllMessages, getMessageFromId, incrementMachine}
 import org.http4s.*
 import org.http4s.dsl.io.*
 import org.http4s.server.Router

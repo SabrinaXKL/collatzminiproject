@@ -1,4 +1,4 @@
-package com.sabrinacollatzminiproject.config
+package com.collatzminiproject.config
 
 import cats.effect._
 import com.typesafe.config.*

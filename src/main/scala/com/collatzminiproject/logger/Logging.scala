@@ -1,4 +1,4 @@
-package com.sabrinacollatzminiproject.logger
+package com.collatzminiproject.logger
 
 import cats.effect.IO
 import org.typelevel.log4cats.LoggerFactory

@@ -10,7 +10,7 @@ assemblyMergeStrategy in assembly := {
   case x => MergeStrategy.first
 }
 
-mainClass in assembly := Some("com.sabrinacollatzminiproject.Main")
+mainClass in assembly := Some("com.collatzminiproject.Main")
 
 val http4sVersion = "1.0.0-M45"
 val circeVersion = "0.15.0-M1"

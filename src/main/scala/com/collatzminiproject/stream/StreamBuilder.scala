@@ -1,7 +1,7 @@
-package com.sabrinacollatzminiproject.stream
+package com.collatzminiproject.stream
 
 import cats.effect.*
-import com.sabrinacollatzminiproject.collatzCalculator.CollatzCalculator
+import com.collatzminiproject.collatzCalculator.CollatzCalculator
 import fs2.*
 
 import scala.concurrent.duration.*

@@ -1,4 +1,4 @@
-package com.sabrinacollatzminiproject.stream
+package com.collatzminiproject.stream
 
 import cats.effect.IO
 import cats.effect.Ref
@@ -7,7 +7,7 @@ import fs2.concurrent.SignallingRef
 import munit.CatsEffectSuite
 import scala.concurrent.duration._
 
-import com.sabrinacollatzminiproject.collatzCalculator.CollatzCalculator
+import com.collatzminiproject.collatzCalculator.CollatzCalculator
 
 class StreamBuilderSpec extends CatsEffectSuite with CollatzCalculator {
 
