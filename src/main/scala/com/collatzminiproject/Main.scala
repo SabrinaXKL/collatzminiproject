@@ -11,8 +11,7 @@
   import cats.syntax.all.*
   import com.collatzminiproject.errors.Errors.failedSetupError
   import com.collatzminiproject.models.{IOMapRefOptionVal, Machine, TopicSSE}
-  import fs2.concurrent.{SignallingRef, Topic}
-  import org.http4s.HttpApp
+  import fs2.concurrent.Topic
 
   object Main extends IOApp {
     given LoggerFactory[IO] = Slf4jFactory.create[IO]

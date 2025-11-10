@@ -5,17 +5,15 @@ import fs2.*
 
 import scala.concurrent.duration.*
 import fs2.concurrent.SignallingRef
-import org.http4s.{MediaType, Response, ServerSentEvent}
-import org.http4s.dsl.io.*
-import org.http4s.headers.`Content-Type`
+import org.http4s.ServerSentEvent
+
 import cats.effect.*
 
 import com.collatzminiproject.models.{IOMapRefOptionVal, Machine, TopicSSE}
 
-
 object StreamBuilder extends CollatzCalculator {
 
-  def createMachine(id: String, startNumber: Int)(using machinesRef: IOMapRefOptionVal, topic: TopicSSE): IO[Response[IO]] =
+  def createMachine(id: String, startNumber: Int)(using machinesRef: IOMapRefOptionVal, topic: TopicSSE): IO[StreamBuilderSuccess] =
     def createStream(startNumber: Int, signallingRef: SignallingRef[IO, Int]): Stream[IO, Unit] = {
       Stream.eval(signallingRef.set(startNumber)) ++ Stream
         .awakeEvery[IO](1.second)
@@ -41,23 +39,23 @@ object StreamBuilder extends CollatzCalculator {
           (someExisting, false)
       }
       response <- if inserted then
-        Created(s"Machine created with id: $id")
+        IO.pure(StreamBuilderSuccess(id, Some(s"Machine created with ID: $id")))
       else
         fiber.cancel >> IO.raiseError(new IllegalArgumentException(s"Machine with ID: $id already exists"))
     } yield response
 
-  def incrementMachine(id: String, inputInt: Int)(using machinesRef: IOMapRefOptionVal): IO[Response[IO]] = {
+  def incrementMachine(id: String, inputInt: Int)(using machinesRef: IOMapRefOptionVal): IO[StreamBuilderSuccess] = {
     val machineRef = machinesRef(id)
     machineRef.get.flatMap {
       case Some(machine) =>
         machine.state.update(_ + inputInt) >>
-          Ok(s"Machine with id: $id updated by $inputInt")
+          IO.pure(StreamBuilderSuccess(id, Some(s"Updated by $inputInt")))
       case None =>
-        NotFound(s"Could not find machine with id: $id")
+        IO.raiseError(new IllegalArgumentException(s"Could not find machine with id: $id"))
     }
   }
 
-  def destroyMachine(id: String)(using machinesRef: IOMapRefOptionVal): IO[Response[IO]] = {
+  def destroyMachine(id: String)(using machinesRef: IOMapRefOptionVal): IO[StreamBuilderResponse] = {
     val machineRef = machinesRef(id)
     machineRef.modify {
       case Some(machine) =>
@@ -66,29 +64,25 @@ object StreamBuilder extends CollatzCalculator {
         (None, None)
     }.flatMap {
       case Some(machine) =>
-        machine.fiber.cancel >> Ok(s"Machine with id: $id destroyed")
+        machine.fiber.cancel >> IO.pure(StreamBuilderSuccess(id, Some(s"Machine with id: $id destroyed")))
       case None =>
-        NotFound(s"Could not find machine with id: $id")
+        IO.pure(StreamBuilderFailure(id, Some(s"Could not find machine with id: $id")))
     }
   }
 
-  def getMessageFromId(id: String)(using topic: TopicSSE): IO[Response[IO]] = {
-    val stream: Stream[IO, ServerSentEvent] =
-      topic
-        .subscribe(100)
-        .filter { case (machineId, _) => machineId == id }
-        .map { case (_, value) =>
-          ServerSentEvent(data = Some(s"Machine $id current value: $value"))
-        }
-
-    Ok(stream).map(_.withContentType(`Content-Type`(MediaType.`text/event-stream`)))
+  def getMessageFromId(id: String)(using topic: TopicSSE): Stream[IO, ServerSentEvent] = {
+    topic
+      .subscribe(100)
+      .filter { case (machineId, _) => machineId == id }
+      .map { case (_, value) =>
+        ServerSentEvent(data = Some(s"Machine $id current value: $value"))
+      }
   }
 
-  def getAllMessages()(using topic: TopicSSE) = {
-    val stream = topic.subscribe(100)
+  def getAllMessages()(using topic: TopicSSE): Stream[IO, ServerSentEvent] = {
+    topic.subscribe(100)
       .map { case (machineId, value) =>
         ServerSentEvent(data = Some(s"Machine $machineId current value: $value"))
       }
-    Ok(stream).map(_.withContentType(`Content-Type`(MediaType.`text/event-stream`)))
   }
 }

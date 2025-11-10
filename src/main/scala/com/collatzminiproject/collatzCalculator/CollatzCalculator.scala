@@ -1,7 +1,5 @@
 package com.collatzminiproject.collatzCalculator
 
-import cats.effect.IO
-
 trait CollatzCalculator {
   def calculateNextCollatzNumber(inputValue: Int): Int =
     inputValue match {

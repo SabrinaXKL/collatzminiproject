@@ -26,10 +26,10 @@ $$
 | POST   | `/increment/<id>/<amount>`      | Increments the value of the machine with the given `id` by the specified `amount`. |
 
 ### GET
-| Method | Endpoint         | Description                                                                                               |
-|--------|------------------|-----------------------------------------------------------------------------------------------------------|
-| GET    | `/messages/<id>` | Retrieves the messages of a machine with the specified `id` and `startingNumber`.                         |
-| GET    | `/messages`      | Retrieves all messages from all machines at the instance of the request as an infinitely updating stream. |
+| Method | Endpoint         | Description                                                                              |
+|--------|------------------|------------------------------------------------------------------------------------------|
+| GET    | `/messages/<id>` | Retrieves the messages of a machine with the specified `id` and `startingNumber` as SSE. |
+| GET    | `/messages`      | Retrieves all messages from all machines infinitely updating stream sending SSE.         |
 
 Below is an image of how the create machine stream works, created using aquascape by Zainab Ali
 

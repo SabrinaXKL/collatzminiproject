@@ -1,9 +1,7 @@
 package com.collatzminiproject.collatzCalculator
 
-import cats.effect.IO
 import munit.{CatsEffectSuite, ScalaCheckEffectSuite}
-import org.scalacheck.Gen
-import org.scalacheck.effect.PropF
+import org.scalacheck.{Gen, Prop}
 
 class CollatzCalculatorSpec extends CatsEffectSuite with ScalaCheckEffectSuite {
 
@@ -27,36 +25,36 @@ class CollatzCalculatorSpec extends CatsEffectSuite with ScalaCheckEffectSuite {
   object calculatorImplemented extends CollatzCalculator
 
   test("Given an even positive integer x, return y the next collatz conjecture number") {
-    PropF.forAllF(evenIntGen) { x =>
-      calculatorImplemented.calculateNextCollatzNumber(x).start.flatMap(_.joinWithNever).map(a => assert(a == x / 2))
+    Prop.forAll(evenIntGen) { x =>
+      val nextNumber = calculatorImplemented.calculateNextCollatzNumber(x)
+      assert(nextNumber == x / 2)
     }
   }
 
   test("Given a odd positive integer x and the next collatz conjecture number y doesnt cause a stack overflow, return y") {
-    PropF.forAllF(oddIntNotTooBigGen) { x =>
-      calculatorImplemented.calculateNextCollatzNumber(x).start.flatMap(_.joinWithNever).map(a => assert(a == x * 3 + 1))
+    Prop.forAll(oddIntNotTooBigGen) { x =>
+      val nextNumber = calculatorImplemented.calculateNextCollatzNumber(x)
+
+      assert(nextNumber == x * 3 + 1)
     }
   }
 
   test("Given a negative integer x, CollatzCalculator should raise a RuntimeException with message Integer is negative") {
-    PropF.forAllF(negativeAndZeroIntGen) { x =>
-      calculatorImplemented.calculateNextCollatzNumber(x).attempt.map {
-        case Left(e: RuntimeException) =>
-          assert(e.getMessage.contains("Integer is negative"))
-        case Left(e) => fail(s"Unexpected exception type: ${e.getClass}")
-        case Right(_) => fail("Expected failure but got success")
+    Prop.forAll(negativeAndZeroIntGen) { x =>
+      val ex = intercept[RuntimeException] {
+        calculatorImplemented.calculateNextCollatzNumber(x)
       }
+      assert(ex.getMessage.contains("Integer is negative"))
     }
   }
-  
+
   test("Given an integer x which will cause a stack overflow, CollatzCalculator should raise a RuntimeException with message Integer Overflow error") {
-    PropF.forAllF(oddIntTooBigGen) { x =>
-      calculatorImplemented.calculateNextCollatzNumber(x).attempt.map {
-        case Left(e: RuntimeException) =>
-          assert(e.getMessage.contains("Integer Overflow error"))
-        case Left(e) => fail(s"Unexpected exception type: ${e.getClass}")
-        case Right(_) => fail("Expected failure but got success")
+    Prop.forAll(oddIntTooBigGen) { x =>
+      val ex = intercept[RuntimeException] {
+        calculatorImplemented.calculateNextCollatzNumber(x)
       }
+
+      assert(ex.getMessage.contains("Integer Overflow error"))
     }
   }
 }
