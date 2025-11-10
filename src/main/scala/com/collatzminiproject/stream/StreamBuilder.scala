@@ -14,22 +14,22 @@ import com.collatzminiproject.models.{IOMapRefOptionVal, Machine, TopicSSE}
 object StreamBuilder extends CollatzCalculator {
 
   def createMachine(id: String, startNumber: Int)(using machinesRef: IOMapRefOptionVal, topic: TopicSSE): IO[StreamBuilderSuccess] =
-    def createStream(startNumber: Int, signallingRef: SignallingRef[IO, Int]): Stream[IO, Unit] = {
-      Stream.eval(signallingRef.set(startNumber)) ++ Stream
+    def createStream(startNumber: Int, internalState: Ref[IO, Int]): Stream[IO, Unit] = {
+      Stream.eval(internalState.set(startNumber)) ++ Stream
         .awakeEvery[IO](1.second)
         .evalMap(_ =>
-          signallingRef.update { current =>
+          internalState.update { current =>
             if current == 1 then startNumber
             else calculateNextCollatzNumber(current)
           } >>
-            signallingRef.get.flatMap { value =>
+            internalState.get.flatMap { value =>
               topic.publish1((id, value)).void
             }
         )
     }
 
     for {
-      internalMachineState <- SignallingRef[IO, Int](startNumber)
+      internalMachineState <- Ref.of[IO, Int](startNumber)
       fiber <- createStream(startNumber, internalMachineState).compile.drain.start
       machineRef = machinesRef(id)
       inserted <- machineRef.modify {
@@ -39,9 +39,9 @@ object StreamBuilder extends CollatzCalculator {
           (someExisting, false)
       }
       response <- if inserted then
-        IO.pure(StreamBuilderSuccess(id, Some(s"Machine created with ID: $id")))
+        IO.pure(StreamBuilderSuccess(id, Some(s"Machine created with id: $id")))
       else
-        fiber.cancel >> IO.raiseError(new IllegalArgumentException(s"Machine with ID: $id already exists"))
+        fiber.cancel >> IO.raiseError(new IllegalArgumentException(s"Machine with id: $id already exists"))
     } yield response
 
   def incrementMachine(id: String, inputInt: Int)(using machinesRef: IOMapRefOptionVal): IO[StreamBuilderSuccess] = {

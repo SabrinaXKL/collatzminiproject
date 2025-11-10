@@ -5,7 +5,7 @@ import cats.data.Kleisli
 import cats.effect.*
 import com.collatzminiproject.errors.Errors.ResponseMessages.somethingWentWrong
 import com.collatzminiproject.models.{IOMapRefOptionVal, TopicSSE}
-import com.collatzminiproject.stream.StreamBuilder.{createMachine, destroyMachine, getAllMessages, getMessageFromId, incrementMachine}
+import com.collatzminiproject.stream.StreamBuilder.*
 import org.http4s.*
 import org.http4s.dsl.io.*
 import org.http4s.server.Router
