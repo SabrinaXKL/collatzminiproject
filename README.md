@@ -4,7 +4,7 @@ scala fs2 http4s and cats.
 ## Introduction
 Small mini project that on request will start a new cats fiber (lightweight thread) which will infinitely stream a series in the collatz conjecture from a given start.
 We call this a machine, it will store an internal number as its current number via atomic ref.
-If the current number reaches 1 then it will restart from the given start.
+If the current number reaches 1 then it will restart from the given start. Can be run turned into an image and run in a docker container.
 
 What is the Collatz Conjecture? It is given by the formula below
 
@@ -47,14 +47,10 @@ Below is an image of how the create machine stream works, created using aquascap
 - When asked to create a machine, I assumed a fiber was sufficient
 - The integer type is enough, super large numbers are not necessary, bigger numbers can be calculated if needed in the future.
 - F[_] not needed IO is fine 
-- logger doesn't fully utilize FP and isn't pure, is fine
+- logger doesn't fully utilize FP and isn't pure
 
 ## RoadMap - TODO
 - Proper testing of routes and service layer
-- Instead of `GetAll` returning all machines at that current time, automatically update if a new machine is created
 - More logging of failures and completed journeys
-- Throw errors correctly when chaining IO calculations, currently not doing this
-- Correctly apply the Topic functionality in FS2 to create an easier manageable all messages system
-- Modify the headers on the return events so they are more aligned with SSE
 - Use the config to have a limit of created machines and a max calculation limit
 

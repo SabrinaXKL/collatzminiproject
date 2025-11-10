@@ -75,7 +75,7 @@ object StreamBuilder extends CollatzCalculator {
   def getMessageFromId(id: String)(using topic: TopicSSE): IO[Response[IO]] = {
     val stream: Stream[IO, ServerSentEvent] =
       topic
-        .subscribe(100) // buffer size
+        .subscribe(100)
         .filter { case (machineId, _) => machineId == id }
         .map { case (_, value) =>
           ServerSentEvent(data = Some(s"Machine $id current value: $value"))
