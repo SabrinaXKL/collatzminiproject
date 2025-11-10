@@ -1,96 +1,94 @@
 package com.collatzminiproject.stream
 
-import cats.effect.*
 import com.collatzminiproject.collatzCalculator.CollatzCalculator
 import fs2.*
 
 import scala.concurrent.duration.*
 import fs2.concurrent.SignallingRef
-import org.http4s.{MediaType, Message, Response, ServerSentEvent}
+import org.http4s.{MediaType, Response, ServerSentEvent}
 import org.http4s.dsl.io.*
 import org.http4s.headers.`Content-Type`
+import cats.effect.*
 
-import scala.collection.immutable.HashMap
+import com.collatzminiproject.models.{IOMapRefOptionVal, Machine, TopicSSE}
+
 
 object StreamBuilder extends CollatzCalculator {
-  type FiberIO = Fiber[IO, Throwable, Unit]
-  type InternalMachineState = SignallingRef[IO, Int]
-  type InternalMachineStateAndFiber = (FiberIO, InternalMachineState)
-  type MapOfAllMachinesById = HashMap[String, InternalMachineStateAndFiber]
 
-  val mapOfAllMachinesByIdRef: Ref[IO, MapOfAllMachinesById] =
-    Ref.unsafe[IO, MapOfAllMachinesById](HashMap.empty[String, InternalMachineStateAndFiber])
-
-  
-  def createMachine(id: String, startNumber: Int): IO[Response[IO]] =
-    def createStream(startNumber: Int, signallingRef: InternalMachineState): Stream[IO, Unit] = {
+  def createMachine(id: String, startNumber: Int)(using machinesRef: IOMapRefOptionVal, topic: TopicSSE): IO[Response[IO]] =
+    def createStream(startNumber: Int, signallingRef: SignallingRef[IO, Int]): Stream[IO, Unit] = {
       Stream.eval(signallingRef.set(startNumber)) ++ Stream
         .awakeEvery[IO](1.second)
         .evalMap(_ =>
-          signallingRef.get.flatMap(signallingRefVal =>
-            if signallingRefVal == 1 then signallingRef.set(startNumber)
-            else calculateNextCollatzNumber(signallingRefVal).flatMap(nextCollatzNumber =>
-              signallingRef.set(nextCollatzNumber)
-            )
-          )
+          signallingRef.update { current =>
+            if current == 1 then startNumber
+            else calculateNextCollatzNumber(current)
+          } >>
+            signallingRef.get.flatMap { value =>
+              topic.publish1((id, value)).void
+            }
         )
     }
 
     for {
       internalMachineState <- SignallingRef[IO, Int](startNumber)
       fiber <- createStream(startNumber, internalMachineState).compile.drain.start
-      creationAttempt <- mapOfAllMachinesByIdRef.modify { mapVal =>
-        if (mapVal.contains(id)) {
-          (mapVal, false)
-        } else {
-          (mapVal + (id -> (fiber, internalMachineState)), true)
-        }
+      machineRef = machinesRef(id)
+      inserted <- machineRef.modify {
+        case None =>
+          (Some(Machine(fiber, internalMachineState)), true)
+        case someExisting =>
+          (someExisting, false)
       }
-      response <- if (creationAttempt) {
+      response <- if inserted then
         Created(s"Machine created with id: $id")
-      } else {
-        fiber.cancel >> IO.raiseError(throw new IllegalArgumentException("Machine ID already exists"))
-      }
+      else
+        fiber.cancel >> IO.raiseError(new IllegalArgumentException(s"Machine with ID: $id already exists"))
     } yield response
 
-  def incrementMachine(id: String, inputInt: Int): IO[Response[IO]] = for {
-    refOption <- mapOfAllMachinesByIdRef.get
-    result <- refOption.get(id) match {
-      case Some(fiber, internalMachineState) =>
-        internalMachineState.update(_ + inputInt) >> Ok(s"machine with id: $id updated by $inputInt")
-      case _ => NotFound(s"Could not find machine with id: $id")
+  def incrementMachine(id: String, inputInt: Int)(using machinesRef: IOMapRefOptionVal): IO[Response[IO]] = {
+    val machineRef = machinesRef(id)
+    machineRef.get.flatMap {
+      case Some(machine) =>
+        machine.state.update(_ + inputInt) >>
+          Ok(s"Machine with id: $id updated by $inputInt")
+      case None =>
+        NotFound(s"Could not find machine with id: $id")
     }
-  } yield result
+  }
 
-  def destroyMachine(id: String): IO[Response[IO]] = for {
-    mapVal <- mapOfAllMachinesByIdRef.get
-    result <- mapVal.get(id) match {
-      case Some(fiber, _) =>
-        fiber.cancel >> mapOfAllMachinesByIdRef.update(mapVal => mapVal - id) >> Ok(s"Machine with id: $id destroyed")
-      case _ => NotFound(s"Could not find machine with id: $id")
+  def destroyMachine(id: String)(using machinesRef: IOMapRefOptionVal): IO[Response[IO]] = {
+    val machineRef = machinesRef(id)
+    machineRef.modify {
+      case Some(machine) =>
+        (None, Some(machine))
+      case None =>
+        (None, None)
+    }.flatMap {
+      case Some(machine) =>
+        machine.fiber.cancel >> Ok(s"Machine with id: $id destroyed")
+      case None =>
+        NotFound(s"Could not find machine with id: $id")
     }
-  } yield result
+  }
 
-  def getMessageFromId(id: String): IO[Response[IO]] = for {
-    mapVal <- mapOfAllMachinesByIdRef.get
-    result <- mapVal.get(id) match {
-      case Some(_, internalMachineState) =>
-        val stream = internalMachineState.discrete.map { value =>
+  def getMessageFromId(id: String)(using topic: TopicSSE): IO[Response[IO]] = {
+    val stream: Stream[IO, ServerSentEvent] =
+      topic
+        .subscribe(100) // buffer size
+        .filter { case (machineId, _) => machineId == id }
+        .map { case (_, value) =>
           ServerSentEvent(data = Some(s"Machine $id current value: $value"))
         }
-        Ok(stream).map(_.withContentType(`Content-Type`(MediaType.`text/event-stream`)))
-      case _ => NotFound(s"Could not find machine with id: $id")
-    }
-  } yield result
 
-  def getAllMessages = (for {
-    mapVal <- mapOfAllMachinesByIdRef.get
-    result <-
-      val streamOfStreams = mapVal.map(a => a._2._2.discrete.map { value =>
-          ServerSentEvent(data = Some(s"Machine ${a._1} current value: $value"))
-      }).reduce(_.merge(_))
-      Ok(streamOfStreams).map(_.withContentType(`Content-Type`(MediaType.`text/event-stream`)))
-  } yield result).handleErrorWith(e => NotFound("Something went wrong"))
+    Ok(stream).map(_.withContentType(`Content-Type`(MediaType.`text/event-stream`)))
+  }
 
-
+  def getAllMessages()(using topic: TopicSSE) = {
+    val stream = topic.subscribe(100)
+      .map { case (machineId, value) =>
+        ServerSentEvent(data = Some(s"Machine $machineId current value: $value"))
+      }
+    Ok(stream).map(_.withContentType(`Content-Type`(MediaType.`text/event-stream`)))
+  }
 }

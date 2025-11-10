@@ -2,6 +2,6 @@
 <project version="4">
   <component name="ScalaCompilerConfiguration">
     <option name="separateProdTestSources" value="true" />
-    <profile name="sbt 1" modules="SabrinaCollatzMiniProject,SabrinaCollatzMiniProject.main,SabrinaCollatzMiniProject.test,sabrinacollatzminiproject,sabrinacollatzminiproject.main,sabrinacollatzminiproject.test" />
+    <profile name="sbt 1" modules="SabrinaCollatzMiniProject,SabrinaCollatzMiniProject.main,SabrinaCollatzMiniProject.test,collatzminiproject,collatzminiproject.main,collatzminiproject.test,sabrinacollatzminiproject,sabrinacollatzminiproject.main,sabrinacollatzminiproject.test" />
   </component>
 </project>

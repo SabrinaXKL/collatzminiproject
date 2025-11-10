@@ -3,7 +3,9 @@ package com.collatzminiproject.routes
 import cats.*
 import cats.data.Kleisli
 import cats.effect.*
+import cats.effect.std.MapRef
 import com.collatzminiproject.errors.Errors.ResponseMessages.somethingWentWrong
+import com.collatzminiproject.models.{IOMapRefOptionVal, TopicSSE}
 import com.collatzminiproject.stream.StreamBuilder.{createMachine, destroyMachine, getAllMessages, getMessageFromId, incrementMachine}
 import org.http4s.*
 import org.http4s.dsl.io.*
@@ -26,7 +28,7 @@ object Routes {
     }
   }
 
-  def postCreateRoute(): HttpRoutes[IO] = {
+  def postCreateRoute()(using machinesRef: IOMapRefOptionVal, topic: TopicSSE): HttpRoutes[IO] = {
     HttpRoutes.of[IO] {
       case POST -> Root / id / startNumber =>
         (for {
@@ -41,7 +43,7 @@ object Routes {
     }
   }
 
-  def postIncrementRoute(): HttpRoutes[IO] = {
+  def postIncrementRoute()(using machinesRef: IOMapRefOptionVal, topic: TopicSSE): HttpRoutes[IO] = {
     HttpRoutes.of[IO] {
       case POST -> Root / id / amount => (for {
         _ <- logger.info(s"[POST] Increment the amount by $amount and id: $id")
@@ -51,7 +53,7 @@ object Routes {
     }
   }
 
-  def postDestroyRoute(): HttpRoutes[IO] = {
+  def postDestroyRoute()(using machinesRef: IOMapRefOptionVal, topic: TopicSSE): HttpRoutes[IO] = {
     HttpRoutes.of[IO] {
       case POST -> Root / id => (for {
         _ <- logger.info(s"[POST] Destroy the machine with id: $id")
@@ -60,7 +62,7 @@ object Routes {
     }
   }
 
-  def getMessagesOfId(): HttpRoutes[IO] = {
+  def getMessagesOfId()(using machinesRef: IOMapRefOptionVal, topic: TopicSSE): HttpRoutes[IO] = {
     HttpRoutes.of[IO] {
       case GET -> Root / id => (for {
         _ <- logger.info(s"[GET] Messages with id: $id")
@@ -68,12 +70,12 @@ object Routes {
       } yield result).handleErrorWith(e => NotFound(somethingWentWrong))
       case GET -> Root => (for {
         _ <- logger.info(s"[GET] all messages across all machines")
-        result <- getAllMessages
+        result <- getAllMessages()
       } yield result).handleErrorWith(e => NotFound(somethingWentWrong))
     }
   }
 
-  val apis: Kleisli[IO, Request[IO], Response[IO]] = Router(
+  def apis()(using machinesRef: IOMapRefOptionVal, topic: TopicSSE): Kleisli[IO, Request[IO], Response[IO]] = Router(
     "/create" -> postCreateRoute(),
     "/increment" -> postIncrementRoute(),
     "/destroy" -> postDestroyRoute(),
